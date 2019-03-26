@@ -1,0 +1,5 @@
+.gradle/
+.idea/
+build/
+out/
+spa-server.iml
