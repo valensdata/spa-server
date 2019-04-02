@@ -42,7 +42,7 @@ public final class HttpStaticFileServer {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(LogLevel.INFO))
+                    //.handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new HttpStaticFileServerInitializer(sslCtx, serverParams, cachedIndexFile));
 
             Channel ch = b.bind(serverParams.getPort()).sync().channel();

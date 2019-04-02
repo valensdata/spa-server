@@ -112,6 +112,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         ChannelFuture lastContentFuture;
 
         if (path.equals(indexFilePath)) {
+            raf.close();
             if (ctx.pipeline().get(SslHandler.class) == null) {
                 sendFileFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(cachedIndexFile.getFileContent()))));
                 lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
