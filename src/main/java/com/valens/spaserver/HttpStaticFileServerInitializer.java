@@ -11,20 +11,14 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
-    private final ServerParams serverParams;
-    private final CachedFile cachedIndexFile;
 
-    public HttpStaticFileServerInitializer(SslContext sslCtx, ServerParams serverParams, CachedFile cachedIndexFile) {
+    HttpStaticFileServerInitializer(SslContext sslCtx) {
         this.sslCtx = sslCtx;
-        this.serverParams = serverParams;
-        this.cachedIndexFile = cachedIndexFile;
     }
 
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.channel().attr(HttpStaticFileServer.SERVER_PARAMS).set(serverParams);
-        pipeline.channel().attr(HttpStaticFileServer.INDEX_CACHED).set(cachedIndexFile);
         if (sslCtx != null) {
             pipeline.addLast(sslCtx.newHandler(ch.alloc()));
         }
@@ -33,4 +27,5 @@ public class HttpStaticFileServerInitializer extends ChannelInitializer<SocketCh
         pipeline.addLast(new ChunkedWriteHandler());
         pipeline.addLast(new HttpStaticFileServerHandler());
     }
+
 }

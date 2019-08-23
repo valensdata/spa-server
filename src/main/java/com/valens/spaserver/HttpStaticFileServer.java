@@ -7,24 +7,23 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.AttributeKey;
 
 import java.io.File;
 
 public final class HttpStaticFileServer {
 
-    public static final AttributeKey<ServerParams> SERVER_PARAMS = AttributeKey.valueOf("serverParams");
-    public static final AttributeKey<CachedFile> INDEX_CACHED = AttributeKey.valueOf("indexCached");
+    static ServerParams serverParams;
+    static CachedFile cachedIndexFile;
+    static String indexFilePath;
 
     public static void main(String[] args) throws Exception {
-        ServerParams serverParams = processServerParams(args);
+        serverParams = processServerParams(args);
         FileWatchService fileWatchService = new FileWatchService(serverParams.getBasePath());
-        CachedFile cachedIndexFile = new CachedFile(serverParams, "/index.html", fileWatchService);
+        cachedIndexFile = new CachedFile(serverParams, "/index.html", fileWatchService);
+        indexFilePath = serverParams.getBasePath() + File.separatorChar + "index.html";
+
         FileWatcher fileWatcher = new FileWatcher(fileWatchService);
         fileWatcher.start();
 
@@ -43,7 +42,7 @@ public final class HttpStaticFileServer {
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     //.handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new HttpStaticFileServerInitializer(sslCtx, serverParams, cachedIndexFile));
+                    .childHandler(new HttpStaticFileServerInitializer(sslCtx));
 
             Channel ch = b.bind(serverParams.getPort()).sync().channel();
 

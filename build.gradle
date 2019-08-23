@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.netty:netty-codec-http:4.1.34.Final'
+    compile 'io.netty:netty-codec-http:4.1.39.Final'
 }
 
 jar {

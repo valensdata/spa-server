@@ -12,7 +12,6 @@ import java.io.*;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -26,10 +25,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-        final ServerParams serverParams = ctx.channel().attr(HttpStaticFileServer.SERVER_PARAMS).get();
-
-        final String indexFilePath = serverParams.getBasePath() + File.separatorChar + "index.html";
-        final CachedFile cachedIndexFile = ctx.channel().attr(HttpStaticFileServer.INDEX_CACHED).get();
 
         if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
@@ -43,6 +38,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         final String uri = request.uri();
+
+        final ServerParams serverParams = HttpStaticFileServer.serverParams;
+
+        //TODO get this in later stage
+        final CachedFile cachedIndexFile = HttpStaticFileServer.cachedIndexFile;
 
         final String path = sanitizeUri(serverParams, uri);
         if (path == null) {
@@ -61,6 +61,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
+        //TODO check error if file is not readable
+
+        boolean indexFileRequested = path.equals(HttpStaticFileServer.indexFilePath);
+
         // Cache Validation
         String ifModifiedSince = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
@@ -71,7 +75,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             // does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
             long fileLastModifiedSeconds;
-            if (path.equals(indexFilePath)) {
+            if (indexFileRequested) {
                 fileLastModifiedSeconds = cachedIndexFile.getFileLastModifiedSeconds();
             } else {
                 fileLastModifiedSeconds = file.lastModified() / 1000;
@@ -83,17 +87,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             }
         }
 
-        RandomAccessFile raf;
-        try {
-            raf = new RandomAccessFile(file, "r");
-        } catch (FileNotFoundException ignore) {
-            sendError(ctx, NOT_FOUND);
-            return;
-        }
-        long fileLength = raf.length();
-        if (path.equals(indexFilePath)) {
-            fileLength = cachedIndexFile.getFileContent().length;
-        }
+        final long fileLength = indexFileRequested ? cachedIndexFile.getFileContent().length : file.length();
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         HttpUtil.setContentLength(response, fileLength);
@@ -108,26 +102,23 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         ctx.write(response);
 
         // Write the content.
-        ChannelFuture sendFileFuture;
         ChannelFuture lastContentFuture;
 
-        if (path.equals(indexFilePath)) {
-            raf.close();
+        //TODO refactor code
+        if (indexFileRequested) {
             if (ctx.pipeline().get(SslHandler.class) == null) {
-                sendFileFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(cachedIndexFile.getFileContent()))));
+                ctx.writeAndFlush(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(cachedIndexFile.getFileContent()))));
                 lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
-                sendFileFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(cachedIndexFile.getFileContent()))));
-                lastContentFuture = sendFileFuture;
+                lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedStream(new ByteArrayInputStream(cachedIndexFile.getFileContent()))));
             }
         } else {
             if (ctx.pipeline().get(SslHandler.class) == null) {
-                sendFileFuture = ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
+                ctx.write(new DefaultFileRegion(file, 0, fileLength), ctx.newProgressivePromise());
                 lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
-                sendFileFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
+                lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(new RandomAccessFile(file, "r"), 0, fileLength, 8192)),
                         ctx.newProgressivePromise());
-                lastContentFuture = sendFileFuture;
             }
         }
 
@@ -143,8 +134,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             sendError(ctx, INTERNAL_SERVER_ERROR);
         }
     }
-
-    private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
 
     private static String sanitizeUri(ServerParams serverParams, String uri) {
         try {
@@ -176,15 +165,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         return uri;
-    }
-
-    private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[^-\\._]?[^<>&\\\"]*");
-
-    private static void sendRedirect(ChannelHandlerContext ctx, String newUri, boolean keepAlive) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND);
-        response.headers().set(HttpHeaderNames.LOCATION, newUri);
-
-        sendAndCleanupConnection(ctx, response, keepAlive);
     }
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
@@ -266,4 +246,5 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(
                 HttpHeaderNames.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
+
 }
