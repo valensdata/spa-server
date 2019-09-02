@@ -1,5 +1,6 @@
 package com.valens.spaserver;
 
+import com.valens.spaserver.constants.ServerParams;
 import com.valens.spaserver.watch.FileWatchListener;
 import com.valens.spaserver.watch.FileWatchService;
 
@@ -8,19 +9,20 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.WatchEvent;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CachedFile implements FileWatchListener {
 
-    private final ServerParams serverParams;
+    private final HashMap<String, String> serverParamsMap;
     private final String filePath;
     private byte[] fileContent;
     private long fileLastModifiedSeconds;
 
-    CachedFile(ServerParams serverParams, String filePath, FileWatchService fileWatchService) throws IOException {
-       this.serverParams = serverParams;
+    CachedFile(HashMap<String, String> serverParamsMap, String filePath, FileWatchService fileWatchService) throws IOException {
+       this.serverParamsMap = serverParamsMap;
        this.filePath = filePath;
        this.cacheFile();
        fileWatchService.addListener(this);
@@ -31,10 +33,10 @@ public class CachedFile implements FileWatchListener {
     }
 
     private void cacheFile() throws IOException {
-        File cacheFile = new File(serverParams.getBasePath() + filePath.replace('/', File.separatorChar));
+        File cacheFile = new File(serverParamsMap.get(ServerParams.BASE_PATH) + filePath.replace('/', File.separatorChar));
         fileLastModifiedSeconds = cacheFile.lastModified() / 1000;
-        if (serverParams.getPlaceholderPrefix() != null) {
-            String placeholderPrefix = serverParams.getPlaceholderPrefix();
+        String placeholderPrefix = serverParamsMap.get(ServerParams.PLACEHOLDER_PREFIX);
+        if (placeholderPrefix != null) {
             Map<String, String> placeholderMap = System.getenv().entrySet().stream().filter(entry -> entry.getKey()
                     .startsWith(placeholderPrefix)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 

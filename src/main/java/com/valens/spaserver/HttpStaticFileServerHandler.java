@@ -2,6 +2,7 @@ package com.valens.spaserver;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedFile;
@@ -39,12 +40,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         final String uri = request.uri();
 
-        final ServerParams serverParams = HttpStaticFileServer.serverParams;
-
-        //TODO get this in later stage
-        final CachedFile cachedIndexFile = HttpStaticFileServer.cachedIndexFile;
-
-        final String path = sanitizeUri(serverParams, uri);
+        final String path = sanitizeUri(uri);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -64,6 +60,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         //TODO check error if file is not readable
 
         boolean indexFileRequested = path.equals(HttpStaticFileServer.indexFilePath);
+        final CachedFile cachedIndexFile = HttpStaticFileServer.cachedIndexFile;
 
         // Cache Validation
         String ifModifiedSince = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
@@ -117,8 +114,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 ctx.write(new DefaultFileRegion(file, 0, fileLength), ctx.newProgressivePromise());
                 lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
-                lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(new RandomAccessFile(file, "r"), 0, fileLength, 8192)),
-                        ctx.newProgressivePromise());
+                lastContentFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(new RandomAccessFile(file, "r"), 0, fileLength, 8192)));
             }
         }
 
@@ -129,13 +125,15 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        if (!(cause instanceof DecoderException)) {
+            cause.printStackTrace();
+        }
         if (ctx.channel().isActive()) {
             sendError(ctx, INTERNAL_SERVER_ERROR);
         }
     }
 
-    private static String sanitizeUri(ServerParams serverParams, String uri) {
+    private static String sanitizeUri(String uri) {
         try {
             uri = URLDecoder.decode(uri, "UTF-8");
         } catch (UnsupportedEncodingException e) {
@@ -143,7 +141,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         if (uri.equals("/")) {
-            return serverParams.getBasePath() + File.separatorChar + "index.html";
+            return HttpStaticFileServer.indexFilePath;
         }
 
         if (uri.charAt(0) != '/') {
@@ -153,11 +151,13 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         // Convert file separators.
         uri = uri.replace('/', File.separatorChar);
 
-        uri = serverParams.getBasePath() + File.separator + uri;
+        String basePath = HttpStaticFileServer.basePath;
+
+        uri = basePath + uri;
 
         File f = new File(uri);
         if (!f.exists()) {
-            return serverParams.getBasePath() + File.separatorChar + "index.html";
+            return HttpStaticFileServer.indexFilePath;
         }
 
         if (f.isDirectory()) {

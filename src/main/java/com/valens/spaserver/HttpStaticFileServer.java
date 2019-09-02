@@ -1,5 +1,6 @@
 package com.valens.spaserver;
 
+import com.valens.spaserver.constants.ServerParams;
 import com.valens.spaserver.watch.FileWatchService;
 import com.valens.spaserver.watch.FileWatcher;
 import io.netty.bootstrap.ServerBootstrap;
@@ -8,35 +9,45 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 
 import java.io.File;
+import java.util.HashMap;
 
 public final class HttpStaticFileServer {
 
-    static ServerParams serverParams;
     static CachedFile cachedIndexFile;
+    static String basePath;
     static String indexFilePath;
 
+    static final HashMap<String, String> serverParamsMap = new HashMap<>();
+
     public static void main(String[] args) throws Exception {
-        serverParams = processServerParams(args);
-        FileWatchService fileWatchService = new FileWatchService(serverParams.getBasePath());
-        cachedIndexFile = new CachedFile(serverParams, "/index.html", fileWatchService);
-        indexFilePath = serverParams.getBasePath() + File.separatorChar + "index.html";
+        processServerParams(args);
+        String rawBasePath = serverParamsMap.get(ServerParams.BASE_PATH);
+        if (rawBasePath.endsWith("/")) {
+            basePath = rawBasePath;
+        } else {
+            basePath = rawBasePath + File.separatorChar;
+        }
+        FileWatchService fileWatchService = new FileWatchService(basePath);
+        cachedIndexFile = new CachedFile(serverParamsMap, "/index.html", fileWatchService);
+
+        indexFilePath = basePath + "index.html";
 
         FileWatcher fileWatcher = new FileWatcher(fileWatchService);
         fileWatcher.start();
 
         // Configure SSL.
         final SslContext sslCtx;
-        if (serverParams.getCertificatePath() != null) {
-            sslCtx = SslContextBuilder.forServer(new File(serverParams.getCertificatePath()), new File(serverParams.getPrivateKeyPath())).build();
+        if (serverParamsMap.containsKey(ServerParams.SSL_ENABLED)) {
+            sslCtx = SslContextUtil.newInstance();
         } else {
             sslCtx = null;
         }
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
+        int port = Integer.valueOf(serverParamsMap.get(ServerParams.PORT));
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -44,10 +55,10 @@ public final class HttpStaticFileServer {
                     //.handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new HttpStaticFileServerInitializer(sslCtx));
 
-            Channel ch = b.bind(serverParams.getPort()).sync().channel();
+            Channel ch = b.bind(port).sync().channel();
 
             System.err.println("Serving at " +
-                    (serverParams.getCertificatePath() != null ? "https" : "http") + "://0.0.0.0:" + serverParams.getPort() + '/');
+                    (sslCtx != null ? "https" : "http") + "://0.0.0.0:" + port + '/');
 
             ch.closeFuture().sync();
         } finally {
@@ -57,42 +68,63 @@ public final class HttpStaticFileServer {
         }
     }
 
-    private static ServerParams processServerParams(String[] args) {
-        ServerParams.Builder builder = ServerParams.Builder.newInstance();
-
+    private static void processServerParams(String[] args) {
         String currentParam = null;
-
         for (String argument: args) {
             if (currentParam == null) {
-                currentParam = argument;
+                switch (argument) {
+                    case "--ssl":
+                        serverParamsMap.put(ServerParams.SSL_ENABLED, "true");
+                        break;
+                    default:
+                        currentParam = argument;
+                }
             } else {
                 switch(currentParam) {
                     case "--port":
                     case "-p":
-                        builder.setPort(Integer.valueOf(argument));
+                        serverParamsMap.put(ServerParams.PORT, argument);
                         break;
                     case "--directory":
                     case "-d":
-                        builder.setBasePath(argument);
+                        serverParamsMap.put(ServerParams.BASE_PATH, argument);
                         break;
                     case "--cert":
                     case "-c":
-                        builder.setCertificatePath(argument);
+                        serverParamsMap.put(ServerParams.CERTIFICATE_PATH, argument);
                         break;
                     case "--key":
                     case "-k":
-                        builder.setPrivateKeyPath(argument);
+                        serverParamsMap.put(ServerParams.PRIVATE_KEY_PATH, argument);
+                        break;
+                    case "--keystore-type":
+                        serverParamsMap.put(ServerParams.KEYSTORE_TYPE, argument);
+                        break;
+                    case "--keystore-path":
+                        serverParamsMap.put(ServerParams.KEYSTORE_PATH, argument);
+                        break;
+                    case "--keystore-password":
+                        serverParamsMap.put(ServerParams.KEYSTORE_PASSWORD, argument);
                         break;
                     case "--placeholder-prefix":
                     case "-pp":
-                        builder.setPlaceholderPrefix(argument);
+                        serverParamsMap.put(ServerParams.PLACEHOLDER_PREFIX, argument);
                         break;
                 }
                 currentParam = null;
             }
         }
 
-        return builder.build();
+        if (!serverParamsMap.containsKey(ServerParams.PORT)) {
+            if (serverParamsMap.containsKey(ServerParams.SSL_ENABLED)) {
+                serverParamsMap.put(ServerParams.PORT, "8443");
+            } else {
+                serverParamsMap.put(ServerParams.PORT, "8080");
+            }
+        }
+        if (!serverParamsMap.containsKey(ServerParams.BASE_PATH)) {
+            serverParamsMap.put(ServerParams.BASE_PATH, System.getProperty("user.dir"));
+        }
     }
 
 }
