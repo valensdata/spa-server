@@ -22,4 +22,6 @@ public class ServerParams {
 
     public static final String PLACEHOLDER_PREFIX = "PLACEHOLDER_PREFIX";
 
+    public static final String TRANSPORT_TYPE = "TRANSPORT_TYPE";
+
 }
