@@ -92,8 +92,8 @@ java -jar spa-server.jar -d demo-dir-path --placeholder-prefix APP
 #### Use property file to define web configuration parameters:
 Create <b>application.properties</b> file with values for the configuration parameters. For example-
 ```properties
-APP_API_URL="http://demohost:9090"
-APP_COOKIE_EXPIRE_MINUTES="30"
+APP_API_URL=http://demohost:9090
+APP_COOKIE_EXPIRE_MINUTES=30
 ```
 
 And run server with path specifying <b>application.properties</b> file
