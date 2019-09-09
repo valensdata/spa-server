@@ -1,6 +1,6 @@
 ## Single Page Application Server
 
-Lightweight high-performance single page application server built using [Netty](https://netty.io/). Using this you can easily serve complied single page web applications developed using frameworks like Angular JS, React JS, Vue JS etc.
+Lightweight high-performance single page application server built using [Netty](https://netty.io/). Using this you can easily serve compiled single page web applications developed using frameworks like Angular JS, React JS, Vue JS etc.
 
 Server features:
 - Builtin support for push-state feature
@@ -55,7 +55,7 @@ java -jar spa-server.jar -d demo-dir-path --ssl --keystore-type PKCS12 --keystor
 ### Using placeholders for web configuration parameters:
 
 Single page applications usually have some web configuration parameters. For example -  
-- web application communicates with backend servers and URL of the backend servers is different for each deployment
+- web application communicates with backend servers and URL of the backend servers are different for each deployment
 - web application needs to have parameters like cookie expiry time and this cookie expiry time parameter needs to be different in test(30 minutes) and production(30 days) environments. 
 
 One way to handle such scenarios is to use framework specific features. But this requires rebuild of web application for each different environment.
@@ -77,7 +77,7 @@ To avoid rebuilding web application for each environment, web configuration para
 
 In the web application code, we can access these parameters using <b>window.API_URL</b>.
 
-### Use environment variables to define web configuration parameters:
+#### Use environment variables to define web configuration parameters:
 In the environment where we need to run web application, we can defined configuration parameters using environment variables. For example-
 ```sh
 export APP_API_URL="http://demohost:9090"
@@ -89,7 +89,7 @@ And run server with placeholder prefix <b>APP</b>
 java -jar spa-server.jar -d demo-dir-path --placeholder-prefix APP
 ```
 
-### Use property file to define web configuration parameters:
+#### Use property file to define web configuration parameters:
 Create <b>application.properties</b> file with values for the configuration parameters. For example-
 ```properties
 APP_API_URL="http://demohost:9090"
