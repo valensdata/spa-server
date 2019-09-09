@@ -21,11 +21,11 @@ public class CachedFile implements FileWatchListener {
     private byte[] fileContent;
     private long fileLastModifiedSeconds;
 
-    CachedFile(HashMap<String, String> serverParamsMap, String filePath, FileWatchService fileWatchService) throws IOException {
+    CachedFile(HashMap<String, String> serverParamsMap, String filePath, List<FileWatchService> fileWatchServiceList) throws IOException {
        this.serverParamsMap = serverParamsMap;
        this.filePath = filePath;
        this.cacheFile();
-       fileWatchService.addListener(this);
+       fileWatchServiceList.forEach(f -> f.addListener(this));
     }
 
     byte[] getFileContent() {
@@ -34,7 +34,7 @@ public class CachedFile implements FileWatchListener {
 
     private void cacheFile() throws IOException {
         File cacheFile = new File(serverParamsMap.get(ServerParams.BASE_PATH) + filePath.replace('/', File.separatorChar));
-        fileLastModifiedSeconds = cacheFile.lastModified() / 1000;
+        fileLastModifiedSeconds = Math.max(cacheFile.lastModified() / 1000, PlaceholderUtil.getPlaceholderFileModifiedTime());
 
         Optional<Map<String, String>> placeholderMapOptional = PlaceholderUtil.getPlaceholders();
 

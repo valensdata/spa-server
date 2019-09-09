@@ -64,6 +64,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         // Cache Validation
         String ifModifiedSince = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
+        long fileLastModifiedSeconds;
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
@@ -71,7 +72,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             // Only compare up to the second because the datetime format we send to the client
             // does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
-            long fileLastModifiedSeconds;
             if (indexFileRequested) {
                 fileLastModifiedSeconds = cachedIndexFile.getFileLastModifiedSeconds();
             } else {
@@ -82,14 +82,19 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
                 sendNotModified(ctx, keepAlive);
                 return;
             }
+        } else {
+            if (indexFileRequested) {
+                fileLastModifiedSeconds = cachedIndexFile.getFileLastModifiedSeconds();
+            } else {
+                fileLastModifiedSeconds = file.lastModified() / 1000;
+            }
         }
 
         final long fileLength = indexFileRequested ? cachedIndexFile.getFileContent().length : file.length();
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         HttpUtil.setContentLength(response, fileLength);
-        //setContentTypeHeader(response, file);
-        setDateAndCacheHeaders(response, file);
+        setDateAndCacheHeaders(response, fileLastModifiedSeconds);
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -228,10 +233,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
      *
      * @param response
      *            HTTP response
-     * @param fileToCache
-     *            file to extract content type
+     * @param lastModified
+     *            last modified time
      */
-    private static void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
+    private static void setDateAndCacheHeaders(HttpResponse response, long lastModified) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -244,7 +249,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.headers().set(HttpHeaderNames.EXPIRES, dateFormatter.format(time.getTime()));
         response.headers().set(HttpHeaderNames.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
         response.headers().set(
-                HttpHeaderNames.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
+                HttpHeaderNames.LAST_MODIFIED, dateFormatter.format(new Date(lastModified * 1000)));
     }
 
 }

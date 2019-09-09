@@ -11,7 +11,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public final class HttpStaticFileServer {
 
@@ -31,13 +33,21 @@ public final class HttpStaticFileServer {
         } else {
             basePath = rawBasePath + "/";
         }
-        FileWatchService fileWatchService = new FileWatchService(basePath);
-        cachedIndexFile = new CachedFile(serverParamsMap, "/index.html", fileWatchService);
+        List<FileWatchService> fileWatchServiceList = new ArrayList<>();
+        FileWatchService rootWatchService = new FileWatchService(basePath);
+        fileWatchServiceList.add(rootWatchService);
+        if (serverParamsMap.containsKey(ServerParams.PLACEHOLDER_PROPERTIES)) {
+            FileWatchService placeholderPropertiesWatchService = new FileWatchService(serverParamsMap.get(ServerParams.PLACEHOLDER_PROPERTIES));
+            fileWatchServiceList.add(placeholderPropertiesWatchService);
+        }
+        cachedIndexFile = new CachedFile(serverParamsMap, "/index.html", fileWatchServiceList);
 
         indexFilePath = basePath + "index.html";
 
-        FileWatcher fileWatcher = new FileWatcher(fileWatchService);
-        fileWatcher.start();
+        fileWatchServiceList.forEach(fileWatchService -> {
+            FileWatcher fileWatcher = new FileWatcher(fileWatchService);
+            fileWatcher.start();
+        });
 
         final SslContext sslCtx;
         if (serverParamsMap.containsKey(ServerParams.SSL_ENABLED)) {
@@ -67,7 +77,6 @@ public final class HttpStaticFileServer {
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
-            fileWatcher.join();
         }
     }
 

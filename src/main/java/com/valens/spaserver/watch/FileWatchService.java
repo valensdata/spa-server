@@ -12,7 +12,12 @@ public class FileWatchService {
     private List<FileWatchListener> fileWatchListeners = new ArrayList<>();
 
     public FileWatchService(String basePath) throws IOException {
-        this.basePath = Paths.get(basePath);
+        Path rawPath = Paths.get(basePath);
+        if (rawPath.toFile().isDirectory()) {
+            this.basePath = rawPath;
+        } else {
+            this.basePath = rawPath.getParent();
+        }
         this.watchService = this.basePath.getFileSystem().newWatchService();
     }
 
@@ -20,7 +25,7 @@ public class FileWatchService {
         fileWatchListeners.add(fileWatchListener);
     }
 
-    public void watch() {
+    void watch() {
         try {
             basePath.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
                     StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);

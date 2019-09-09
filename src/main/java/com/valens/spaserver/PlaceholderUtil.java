@@ -39,4 +39,12 @@ class PlaceholderUtil {
         }
     }
 
+    static long getPlaceholderFileModifiedTime() throws IOException {
+        String placeholderProperties = HttpStaticFileServer.serverParamsMap.get(ServerParams.PLACEHOLDER_PROPERTIES);
+        if (placeholderProperties != null) {
+            return new File(placeholderProperties).lastModified() / 1000;
+        } else {
+            return 0L;
+        }
+    }
 }
