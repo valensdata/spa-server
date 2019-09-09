@@ -12,7 +12,7 @@ import java.nio.file.WatchEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 public class CachedFile implements FileWatchListener {
 
@@ -28,17 +28,18 @@ public class CachedFile implements FileWatchListener {
        fileWatchService.addListener(this);
     }
 
-    public byte[] getFileContent() {
+    byte[] getFileContent() {
         return fileContent;
     }
 
     private void cacheFile() throws IOException {
         File cacheFile = new File(serverParamsMap.get(ServerParams.BASE_PATH) + filePath.replace('/', File.separatorChar));
         fileLastModifiedSeconds = cacheFile.lastModified() / 1000;
-        String placeholderPrefix = serverParamsMap.get(ServerParams.PLACEHOLDER_PREFIX);
-        if (placeholderPrefix != null) {
-            Map<String, String> placeholderMap = System.getenv().entrySet().stream().filter(entry -> entry.getKey()
-                    .startsWith(placeholderPrefix)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        Optional<Map<String, String>> placeholderMapOptional = PlaceholderUtil.getPlaceholders();
+
+        if (placeholderMapOptional.isPresent()) {
+            Map<String, String> placeholderMap = placeholderMapOptional.get();
 
             String contentString = new String(Files.readAllBytes(cacheFile.toPath()), Charset.forName("UTF-8"));
 
@@ -52,7 +53,7 @@ public class CachedFile implements FileWatchListener {
         }
     }
 
-    public long getFileLastModifiedSeconds() {
+    long getFileLastModifiedSeconds() {
         return fileLastModifiedSeconds;
     }
 

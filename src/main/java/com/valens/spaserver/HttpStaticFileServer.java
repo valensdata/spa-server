@@ -73,13 +73,11 @@ public final class HttpStaticFileServer {
 
     private static void processServerParams(String[] args) {
         String currentParam = null;
-        boolean sslEnabled = false;
         for (String argument: args) {
             if (currentParam == null) {
                 switch (argument) {
                     case "--ssl":
                         serverParamsMap.put(ServerParams.SSL_ENABLED, "true");
-                        sslEnabled = true;
                         break;
                     case "--epoll":
                         serverParamsMap.put(ServerParams.TRANSPORT_TYPE, TransportType.EPOLL);
@@ -120,6 +118,9 @@ public final class HttpStaticFileServer {
                     case "--placeholder-prefix":
                     case "-pp":
                         serverParamsMap.put(ServerParams.PLACEHOLDER_PREFIX, argument);
+                        break;
+                    case "--placeholder-properties":
+                        serverParamsMap.put(ServerParams.PLACEHOLDER_PROPERTIES, argument);
                         break;
                 }
                 currentParam = null;
