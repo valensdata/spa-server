@@ -7,7 +7,6 @@ Server features:
 - Easy to serve requests on HTTPS. You just need your SSL certificates or PKCS12 keystore which contains these certificates
 - Support for replacing placeholders like API_URL and other environment specific web configuration parameters in index.html using environment variables or using properties file. This makes it easy to deploy the compiled web application to multiple environments. No need to compile web application multiple times for each environment
 - HTTP protocol support for Keep-Alive and Not Modified headers
-- Native optimizers for supported Linux and \*nix operating systems for better performance
 
 Usage:
 ```sh
@@ -28,8 +27,6 @@ Following options are supported while running the server:
 | --key &lt;cert-key&gt; | -k &lt;cert-key&gt; | Path to ssl key file  |
 | --placeholder-prefix &lt;placeholder-prefix&gt;  | -pp &lt;placeholder-prefix&gt;  | Environment variable prefix. All environment variables that match the prefix will be used to replace placeholders in index.html  |
 | --placeholder-properties &lt;property-file-path&gt;  |   | Path of the properties file which will be used to replace placeholders in index.html  |
-| --epoll  |   | Enable native epoll optimization |
-| --kqueue  |   | Enable native kqueue optimization |
 
 ### Usage examples:
 Simply run server on default port:
