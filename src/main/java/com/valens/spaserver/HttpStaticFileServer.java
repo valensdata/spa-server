@@ -3,6 +3,9 @@ package com.valens.spaserver;
 import com.valens.spaserver.constants.KeyStoreType;
 import com.valens.spaserver.constants.ServerParams;
 import com.valens.spaserver.constants.TransportType;
+import com.valens.spaserver.handler.AbstractFileHandler;
+import com.valens.spaserver.handler.FileHandler;
+import com.valens.spaserver.handler.IndexFileHandler;
 import com.valens.spaserver.transport.TransportProvider;
 import com.valens.spaserver.watch.FileWatchService;
 import com.valens.spaserver.watch.FileWatcher;
@@ -17,9 +20,12 @@ import java.util.List;
 
 public final class HttpStaticFileServer {
 
-    static CachedFile cachedIndexFile;
-    static String basePath;
-    static String indexFilePath;
+    public static CachedFile cachedIndexFile;
+    public static String basePath;
+    public static String indexFilePath;
+
+    public static AbstractFileHandler indexFileHandler;
+    public static AbstractFileHandler fileHandler;
 
     final private static int DEFAULT_PORT = 5000;
 
@@ -41,6 +47,9 @@ public final class HttpStaticFileServer {
             fileWatchServiceList.add(placeholderPropertiesWatchService);
         }
         cachedIndexFile = new CachedFile(serverParamsMap, "/index.html", fileWatchServiceList);
+
+        indexFileHandler = new IndexFileHandler();
+        fileHandler = new FileHandler();
 
         indexFilePath = basePath + "index.html";
 

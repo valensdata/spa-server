@@ -28,7 +28,7 @@ public class CachedFile implements FileWatchListener {
        fileWatchServiceList.forEach(f -> f.addListener(this));
     }
 
-    byte[] getFileContent() {
+    public byte[] getFileContent() {
         return fileContent;
     }
 
@@ -53,7 +53,7 @@ public class CachedFile implements FileWatchListener {
         }
     }
 
-    long getFileLastModifiedSeconds() {
+    public long getFileLastModifiedSeconds() {
         return fileLastModifiedSeconds;
     }
 

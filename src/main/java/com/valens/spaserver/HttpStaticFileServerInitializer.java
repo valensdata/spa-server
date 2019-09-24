@@ -1,5 +1,6 @@
 package com.valens.spaserver;
 
+import com.valens.spaserver.handler.HttpStaticFileServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
