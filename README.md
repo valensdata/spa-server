@@ -34,9 +34,9 @@ Simply run server on default port:
 java -jar spa-server.jar -d demo-dir-path
 ```
 
-Run server with port 8080 and epoll optimization:
+Run server with port 8080:
 ```sh
-java -jar spa-server.jar --epoll -d demo-dir-path -p 8080
+java -jar spa-server.jar -d demo-dir-path -p 8080
 ```
 
 Run server on HTTPS with SSL certificates:
