@@ -13,6 +13,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
+import org.apache.tika.Tika;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +28,9 @@ public final class HttpStaticFileServer {
     public static AbstractFileHandler indexFileHandler;
     public static AbstractFileHandler fileHandler;
 
-    final private static int DEFAULT_PORT = 5000;
+    private static final int DEFAULT_PORT = 5000;
+
+    public static final Tika tika = new Tika();
 
     public static final HashMap<String, String> serverParamsMap = new HashMap<>();
 

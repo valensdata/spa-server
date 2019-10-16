@@ -1,11 +1,13 @@
 package com.valens.spaserver.handler;
 
+import com.valens.spaserver.HttpStaticFileServer;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
+import org.apache.tika.Tika;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -18,6 +20,8 @@ public interface Handler {
     String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     String HTTP_DATE_GMT_TIMEZONE = "GMT";
     int HTTP_CACHE_SECONDS = 60;
+
+    Tika tika = HttpStaticFileServer.tika;
 
     default void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         FullHttpResponse response = new DefaultFullHttpResponse(
@@ -97,6 +101,13 @@ public interface Handler {
         response.headers().set(HttpHeaderNames.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
         response.headers().set(
                 HttpHeaderNames.LAST_MODIFIED, dateFormatter.format(new Date(lastModified * 1000)));
+    }
+
+    default void setContentType(HttpResponse response, String path) {
+        String detectedMimeType = tika.detect(path);
+        if (!detectedMimeType.equals("application/octet-stream")) {
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, detectedMimeType);
+        }
     }
 
 }

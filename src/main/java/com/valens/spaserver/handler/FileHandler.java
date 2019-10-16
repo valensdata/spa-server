@@ -60,6 +60,7 @@ public class FileHandler extends AbstractFileHandler {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         HttpUtil.setContentLength(response, fileLength);
         setDateAndCacheHeaders(response, fileLastModifiedSeconds);
+        setContentType(response, path);
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
